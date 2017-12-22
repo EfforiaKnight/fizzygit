@@ -1,6 +1,8 @@
 function fizzygit
-    # use diff-so-fancy if available
-    type -qf diff-so-fancy; and set fancy '|diff-so-fancy'
+    function __diff_so_fancy
+        # use diff-so-fancy if available
+        type -qf diff-so-fancy; and echo '|diff-so-fancy'
+    end
 
     function __fzf_fizzycmd
         set -q FZF_TMUX; or set FZF_TMUX 0
@@ -10,7 +12,6 @@ function fizzygit
             --ansi \
             --cycle \
             --reverse \
-            --multi \
             --bind='alt-v:page-up' \
             --bind='ctrl-v:page-down' \
             --bind='alt-k:preview-up,alt-p:preview-up' \
@@ -35,11 +36,20 @@ function fizzygit
 
     function glo
         inside_work_tree; or return 1
-        set -l tmux_less "tmux split-window -p 100 -c '#{pane_current_path}' 'git show a83f057 | less -R'"
-        set -l cmd "echo {} |grep -o '[a-f0-9]\{7\}' |head -1 |xargs -I {} git show --color=always {} $fancy"
-        set -l cmd "echo {} |grep -o '[a-f0-9]\{7\}' |head -1 |xargs -I {} git show --color=always {} $fancy"
+        set -l fancy (__diff_so_fancy)
+
+        set -l gitshow "git show --color=always "
+        set -l grepsha "echo {} |grep -o '[a-f0-9]\{7\}' |head -1"
+
+        set -l cmd "$grepsha |xargs -I {} $gitshow $fancy"
         set -l gitlog "git log --graph --color=always --pretty=format:'%Cred%h%Creset -%C(auto)%d% %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'"
 
-        eval "$gitlog |" (__fzf_fizzycmd)' -e +s --tiebreak=index --bind="enter:execute($tmux_less)" --preview="$cmd"'
+        if [ $FZF_TMUX -eq 1 ]
+            set show "$grepsha |xargs -I {} tmux split-window -p 100 -c '#{pane_current_path}' '$gitshow'{}'$fancy |less -R'"
+        else
+            set show "$grepsha |xargs -I {} $gitshow {} $fancy |less -R"
+        end
+
+        eval "$gitlog |" (__fzf_fizzycmd) ' -e +s --tiebreak=index --bind="enter:execute($show)" --preview="$cmd"'
     end
 end
