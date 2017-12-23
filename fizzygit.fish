@@ -41,17 +41,28 @@ function fizzygit
         set -l gitshow "git show --color=always "
         set -l grepsha "echo {} |grep -o '[a-f0-9]\{7\}' |head -1"
 
-        set -l cmd "$grepsha |xargs -I {} $gitshow {} $fancy"
-        set -l gitlog "git log --graph --color=always --pretty=format:'%Cred%h%Creset -%C(auto)%d% %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'"
+        set -l prevshow "$grepsha |xargs -I {} $gitshow {} $fancy"
+        set -l gitlog "git log \
+            --graph \
+            --color=always \
+            --pretty=format:'%Cred%h%Creset -%C(auto)%d% %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' \
+            $argv"
 
         if [ $FZF_TMUX -eq 1 ]
-            set -q FZF_TMUX_SPLIT_W; or set FZF_TMUX_SPLIT_W "tmux split-window -p 100 -c '#{pane_current_path}'"
-            set show "$grepsha |xargs -I {} $FZF_TMUX_SPLIT_W '$gitshow'{}'$fancy |less -R'"
+            set -q FZF_TMUX_SPLIT_W; or set FZF_TMUX_SPLIT_W \
+                "tmux split-window -p 100 -c '#{pane_current_path}'"
+            set show "$grepsha \
+                |xargs -I {} $FZF_TMUX_SPLIT_W '$gitshow'{}'$fancy \
+                |less -R'"
         else
-            set show "$cmd |less -R"
+            set show "$prevshow |less -R"
         end
 
-        eval "$gitlog |" (__fzf_fizzycmd) ' -e +s --tiebreak=index --bind="enter:execute($show)" --preview="$cmd"'
+        eval "$gitlog |" (__fzf_fizzycmd) ' \
+            --no-sort --exact \
+            --tiebreak=index \
+            --bind="enter:execute($show)" \
+            --preview="$prevshow"'
     end
 
     function gd -d "Git diff with fzf"
@@ -60,17 +71,21 @@ function fizzygit
 
         set -l gitdiff "git diff --color=always -- "
 
-        set -l cmd "$gitdiff {} $fancy"
+        set -l prevshow "$gitdiff {} $fancy"
         set -l gitls "git ls-files --modified"
 
         if [ $FZF_TMUX -eq 1 ]
-            set -q FZF_TMUX_SPLIT_W; or set FZF_TMUX_SPLIT_W "tmux split-window -p 100 -c '#{pane_current_path}'"
+            set -q FZF_TMUX_SPLIT_W; or set FZF_TMUX_SPLIT_W \
+                "tmux split-window -p 100 -c '#{pane_current_path}'"
             set show "$FZF_TMUX_SPLIT_W '$gitdiff'{}'$fancy |less -R'"
         else
-            set show "$cmd |less -R"
+            set show "$prevshow |less -R"
         end
 
-        eval "$gitls |" (__fzf_fizzycmd) ' -e -0 --bind="enter:execute($show)" --preview="$cmd"'
+        eval "$gitls |" (__fzf_fizzycmd) ' -0 \
+            --exact \
+            --bind="enter:execute($show)" \
+            --preview="$prevshow"'
     end
 
     function ga -d "Git add with fzf"
@@ -79,11 +94,29 @@ function fizzygit
 
         set -l gitdiff "git diff --color=always -- "
 
-        set -l cmd "$gitdiff {-1} $fancy"
-        set -l gitstatus "git -c color.status=always status --short | grep 31m | awk '{printf "[%10s]  ", $1; $1=""; print $0}'"
+        set -l prevshow "$gitdiff {-1} $fancy"
+        set -l gitstatus git -c color.status=always status --short \
+            \| grep 31m \
+            \| awk '\'{printf "[%10s]", $1; $1=""; print $0}\''
 
-        set -l files (eval "$gitstatus |" (__fzf_fizzycmd) ' -e -0 -m --nth 2..,.. --preview="$cmd" | cut -d] -f2 | sed "s/.* -> //"')
-        echo $files
+        if [ $FZF_TMUX -eq 1 ]
+            set -q FZF_TMUX_SPLIT_W; or set FZF_TMUX_SPLIT_W \
+                "tmux split-window -p 100 -c '#{pane_current_path}'"
+            set show "$FZF_TMUX_SPLIT_W '$gitdiff'{-1}'$fancy |less -R'"
+        else
+            set show "$prevshow |less -R"
+        end
+
         # [ -n $files ]; and echo $files |xargs -t -I {} git add {}; and git status
+
+        while set -l out (eval "$gitstatus |" (__fzf_fizzycmd) ' -0 \
+                --multi --exact \
+                --query="$query" \
+                --print-query \
+                --bind="alt-enter:accept" \
+                --bind="enter:execute($show)" \
+                --preview="$prevshow"')
+            echo $out
+        end
     end
 end
