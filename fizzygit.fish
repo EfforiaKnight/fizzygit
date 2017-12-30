@@ -96,8 +96,10 @@ function fizzygit
 
         set -l prevshow "$gitdiff {-1} $fancy"
         set -l gitstatus git -c color.status=always status --short \
-            \| grep 31m \
+            # \| grep 31m \
             \| awk '\'{printf "[%10s]", $1; $1=""; print $0}\''
+
+        set -l header "alt-enter:add, alt-r:reset, ctrl-p: patch mode"
 
         if [ $FZF_TMUX -eq 1 ]
             set -q FZF_TMUX_SPLIT_W; or set FZF_TMUX_SPLIT_W \
@@ -107,16 +109,30 @@ function fizzygit
             set show "$prevshow |less -R"
         end
 
-        # [ -n $files ]; and echo $files |xargs -t -I {} git add {}; and git status
-
         while set -l out (eval "$gitstatus |" (__fzf_fizzycmd) ' -0 \
                 --multi --exact \
+                --header="$header" \
                 --query="$query" \
                 --print-query \
                 --bind="alt-enter:accept" \
+                --bind="ctrl-p:accept" \
+                --expect="ctrl-p" \
+                --bind="alt-r:accept" \
+                --expect="alt-r" \
                 --bind="enter:execute($show)" \
                 --preview="$prevshow"')
-            echo $out
+            set -l query $out[1]
+            set -l key $out[2]
+            set -l files (string match -a -r '(?<=\]\s)[\w]+\.?[\w]*' "$out[3..-1]")
+
+            switch "$key"
+                case "ctrl-p"
+                    git add -p "$files" > /dev/null 2>&1
+                case "alt-r"
+                    git reset HEAD "$files" > /dev/null 2>&1
+                case "*"
+                    git add "$files" > /dev/null 2>&1
+            end
         end
     end
 end
