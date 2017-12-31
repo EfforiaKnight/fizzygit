@@ -34,7 +34,7 @@ function fizzygit
         git rev-parse --is-inside-work-tree >/dev/null
     end
 
-    function glo -d "Pretty git log with fzf"
+    function gl -d "Pretty git log with fzf"
         inside_work_tree; or return 1
         set -l fancy (__diff_so_fancy)
 
@@ -109,6 +109,7 @@ function fizzygit
             set show "$prevshow |less -R"
         end
 
+        #FIXME: without tmux doesn't work,need to figure out how to pipe to less
         while set -l out (eval "$gitstatus |" (__fzf_fizzycmd) ' -0 \
                 --multi --exact \
                 --header="$header" \
@@ -127,7 +128,7 @@ function fizzygit
 
             switch "$key"
                 case "ctrl-p"
-                    git add -p "$files" > /dev/null 2>&1
+                    git add -p "$files"
                 case "alt-r"
                     git reset HEAD "$files" > /dev/null 2>&1
                 case "*"
