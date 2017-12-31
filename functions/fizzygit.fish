@@ -128,11 +128,11 @@ function fizzygit
 
             switch "$key"
                 case "ctrl-p"
-                    git add -p "$files"
+                    git add -p $files
                 case "alt-r"
-                    git reset HEAD "$files" > /dev/null 2>&1
+                    git reset HEAD $files > /dev/null 2>&1
                 case "*"
-                    git add "$files" > /dev/null 2>&1
+                    git add $files > /dev/null 2>&1
             end
         end
     end
