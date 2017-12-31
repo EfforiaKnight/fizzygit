@@ -42,7 +42,7 @@ function fizzygit
         set -l grepsha "echo {} |grep -o '[a-f0-9]\{7\}' |head -1"
 
         set -l prevshow "$grepsha |xargs -I {} $gitshow {} $fancy"
-        set -l gitlog "git log \
+        set -l gitlog "git log --all \
             --graph \
             --color=always \
             --pretty=format:'%Cred%h%Creset -%C(auto)%d% %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' \
