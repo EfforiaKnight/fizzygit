@@ -124,7 +124,8 @@ function fizzygit
                 --preview="$prevshow"')
             set -l query $out[1]
             set -l key $out[2]
-            set -l files (string match -a -r '(?<=\]\s)[\w]+\.?[\w]*' "$out[3..-1]")
+            set -l files (string match -a -r '(?<=\]\s)[\w\.\/]+\.?[\w]*' "$out[3..-1]")
+            echo $out
 
             switch "$key"
                 case "ctrl-p"
